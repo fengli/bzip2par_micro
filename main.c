@@ -70,7 +70,9 @@ void df_simpleSort ( UChar *block, Int32 last, Int32 *zptr, UInt16 *quadrant,
       }
   }
 
-  printf ("workdone:%d\n",*workDone_p);
+  #ifdef _DEBUG
+  fprintf (stderr, "workdone:%d\n",*workDone_p);
+  #endif
 }
 
 int main (int argc, char **argv)
@@ -89,8 +91,15 @@ int main (int argc, char **argv)
   Int32 d=0;
   Int32 i;
 
+  struct timeval *start = (struct timeval *) malloc (sizeof (struct timeval));
+  struct timeval *end = (struct timeval *) malloc (sizeof (struct timeval));
+
   for (i = 0; i < size; i++)
     zptr[i] = i;
 
+  gettimeofday (start, NULL);
   df_simpleSort ( block, last, zptr, quadrant, workDone_p, workLimit, firstAttempt, lo, hi, d );
+  gettimeofday (end, NULL);
+
+  fprintf (stderr, "[main] execution time: %.5f seconds\n", tdiff (end, start));
 }

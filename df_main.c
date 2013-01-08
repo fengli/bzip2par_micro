@@ -34,6 +34,7 @@ typedef struct fp_worker{
 }fp_worker;
 
 Int32 tasks_created=0;
+Int32 tasks_consumed=0;
 
 Int32 incs[14] = { 1, 4, 13, 40, 121, 364, 1093, 3280,
                    9841, 29524, 88573, 265720,
@@ -81,7 +82,7 @@ void work_func ()
   /* fprintf (stderr, "tasks_created:%d\n", tasks_created); */
   dfs_tend ();
 
-  __sync_sub_and_fetch (&tasks_created, 1);
+  __sync_add_and_fetch (&tasks_consumed, 1);
 }
 
 void df_simpleSort ( UChar *block, Int32 last, Int32 *zptr, UInt16 *quadrant,
@@ -103,7 +104,7 @@ void df_simpleSort ( UChar *block, Int32 last, Int32 *zptr, UInt16 *quadrant,
     for (i = lo+h; i <= hi; i++)
       {
 	/* fprintf (stderr, "***** %d created\n",i); */
-	__sync_add_and_fetch (&tasks_created, 1);
+	tasks_created++;
 
 	if (*workDone_p > workLimit && firstAttempt) break;
 
@@ -124,12 +125,14 @@ void df_simpleSort ( UChar *block, Int32 last, Int32 *zptr, UInt16 *quadrant,
   }
 
   uint64_t waiting = 0;
-  while (tasks_created != 0)
+  while (tasks_created != tasks_consumed)
     {
       fflush(stdout);//fprintf (stderr,"tasks_created:%d\n",tasks_created);
     }
 
+  #ifdef _DEBUG
   fprintf (stderr,"workdone:%d\n",*workDone_p);
+  #endif
 }
 
 int main (int argc, char **argv)
@@ -148,10 +151,17 @@ int main (int argc, char **argv)
   Int32 d=0;
   Int32 i;
 
+  struct timeval *start = (struct timeval *) malloc (sizeof (struct timeval));
+  struct timeval *end = (struct timeval *) malloc (sizeof (struct timeval));
+
   for (i = 0; i < size; i++)
     zptr[i] = i;
 
+  gettimeofday (start, NULL);
   df_simpleSort ( block, last, zptr, quadrant, workDone_p, workLimit, firstAttempt, lo, hi, d );
+  gettimeofday (end, NULL);
+
+  fprintf (stderr, "[df_main] execution time: %.5f seconds\n", tdiff (end, start));
 
   /* for (i = 0; i < size; i++) */
   /*   fprintf (stderr, "%d,", zptr[i]); */
