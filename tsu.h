@@ -6,7 +6,8 @@
 #include <unistd.h>
 
 #define LAST 10000
-#define DELAY 1000
+#define DELAY 10
+#define BLOCKSIZE 100
 
 // #define _DEBUG
 

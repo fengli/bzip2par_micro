@@ -19,19 +19,21 @@ Int32 incs[14] = { 1, 4, 13, 40, 121, 364, 1093, 3280,
                    797161, 2391484 };
 
 Bool df_fullGtU ( Int32 i, UChar *block, Int32 last, UInt16* quadrant,
-		  Int32 *workDone_p, Int32 i1, Int32 i2 )
+		  uint64_t *workDone_p, Int32 i1, Int32 i2 )
 {
   int delay = DELAY,k;
+  int sum = 0;
 
-  for (k = 0; k < delay; k++);
+  for (k = 0; k < delay; k++) sum+=(k%17);
 
   *workDone_p+=1;
 
-  return (i%2 == 0);
+  return ((i+sum)%2 == 0);
 }
+
 void work_func (Int32 i, Int32 lo, Int32 h, Int32 hi, Int32 d,
 		UChar *block, Int32 last, Int32 *zptr, Int16 *quadrant,
-		Int32 *workDone_p, Int32 workLimit, Bool firstAttempt)
+		uint64_t *workDone_p, uint64_t workLimit, Bool firstAttempt)
 {
   Int32 v,j;
 
@@ -48,7 +50,7 @@ void work_func (Int32 i, Int32 lo, Int32 h, Int32 hi, Int32 d,
 }
 
 void df_simpleSort ( UChar *block, Int32 last, Int32 *zptr, UInt16 *quadrant,
-		     Int32 *workDone_p, Int32 workLimit, Bool firstAttempt,
+		     uint64_t *workDone_p, uint64_t workLimit, Bool firstAttempt,
 		     Int32 lo, Int32 hi, Int32 d )
 {
   Int32 i, j, h, bigN, hp;
@@ -71,7 +73,7 @@ void df_simpleSort ( UChar *block, Int32 last, Int32 *zptr, UInt16 *quadrant,
   }
 
   #ifdef _DEBUG
-  fprintf (stderr, "workdone:%d\n",*workDone_p);
+  fprintf (stderr, "workdone:%ld\n",*workDone_p);
   #endif
 }
 
@@ -82,9 +84,9 @@ int main (int argc, char **argv)
   Int32 size=last+30;
   Int32 *zptr = malloc (size * sizeof (Int32));
   UInt16 *quadrant;
-  Int32 workDone=0;
-  Int32 *workDone_p=&workDone;
-  Int32 workLimit=100000;
+  uint64_t workDone=0;
+  uint64_t *workDone_p=&workDone;
+  uint64_t workLimit=1<<60;
   Bool firstAttempt;
   Int32 lo=0;
   Int32 hi=last;
