@@ -55,7 +55,26 @@ Bool df_fullGtU ( Int32 i, UChar *block, Int32 last, UInt16* quadrant,
 
   return ((i+sum)%2 == 0);
 }
-void work_func ()
+
+void work_func (Int32 i, Int32 lo, Int32 h, Int32 hi, Int32 d,
+		UChar *block, Int32 last, Int32 *zptr, Int16 *quadrant,
+		uint64_t *workDone_p, uint64_t workLimit, Bool firstAttempt)
+{
+  Int32 v,j;
+
+  v = zptr[i];
+  j = i;
+
+  while (df_fullGtU (i, block, last, quadrant, workDone_p, zptr[j-h]+d, v+d)) {
+    zptr[j] = zptr[j-h];
+    j = j - h;
+    if (j <= (lo + h - 1)) break;
+  }
+
+  zptr[j] = v;
+}
+
+void start_work_func ()
 {
   fp_worker *fp = (fp_worker *) dfs_tload ();
   Int32 ii = fp->i;
@@ -73,17 +92,9 @@ void work_func ()
 
   Int32 i,v,j;
 
-  for (i = ii; i <= min (hi, ii+BLOCKSIZE-1); i++)
-    {    
-      v = zptr[i];
-      j = i;
-
-      while (df_fullGtU (i, block, last, quadrant, workDone_p, zptr[j-h]+d, v+d)) {
-	zptr[j] = zptr[j-h];
-	j = j - h;
-	if (j <= (lo + h - 1)) break;
-      }
-      zptr[j] = v;
+  for (i = ii; i <= hi; i+=h)
+    {
+      work_func (i, lo, h, hi, d, block, last, zptr, quadrant, workDone_p, workLimit, firstAttempt);
     }
 
   /* fprintf (stderr, "tasks_created:%d\n", tasks_created); */
@@ -108,14 +119,14 @@ void df_simpleSort ( UChar *block, Int32 last, Int32 *zptr, UInt16 *quadrant,
 
   for (; hp >= 0; hp--) {
     h = incs[hp];
-    for (i = lo+h; i <= hi; i+=BLOCKSIZE)
+    for (i = lo+h; i < lo+h+h; i++)
       {
 	/* fprintf (stderr, "***** %d created\n",i); */
 	tasks_created++;
 
-	if (*workDone_p > workLimit && firstAttempt) break;
+	if (*workDone_p > workLimit && firstAttempt) return;
 
-	fp_worker *fp = dfs_tcreate (1, sizeof (fp_worker), work_func);
+	fp_worker *fp = dfs_tcreate (1, sizeof (fp_worker), start_work_func);
 	dfs_twrite_32 (fp, offsetof (fp_worker, i), i);
 	dfs_twrite_32 (fp, offsetof (fp_worker, lo), lo);
 	dfs_twrite_32 (fp, offsetof (fp_worker, hi), hi);
@@ -129,6 +140,10 @@ void df_simpleSort ( UChar *block, Int32 last, Int32 *zptr, UInt16 *quadrant,
 	dfs_twrite (fp, offsetof (fp_worker, quadrant), quadrant);
 	dfs_twrite (fp, offsetof (fp_worker, workDone_p), workDone_p);
 	dfs_tdecrease (fp);
+      }
+    while (tasks_created != tasks_consumed)
+      {
+	fflush (stdout);
       }
   }
 
@@ -171,7 +186,9 @@ int main (int argc, char **argv)
 
   fprintf (stderr, "[df_main] execution time: %.5f seconds\n", tdiff (end, start));
 
-  /* for (i = 0; i < size; i++) */
-  /*   fprintf (stderr, "%d,", zptr[i]); */
-  /* fprintf (stderr,"\n"); */
+  #ifdef _DEBUG
+  for (i = 0; i < size; i++)
+    fprintf (stderr, "%d,", zptr[i]);
+  fprintf (stderr,"\n");
+  #endif
 }

@@ -104,4 +104,10 @@ int main (int argc, char **argv)
   gettimeofday (end, NULL);
 
   fprintf (stderr, "[main] execution time: %.5f seconds\n", tdiff (end, start));
+
+  #ifdef _DEBUG
+  for (i = 0; i < size; i++)
+    fprintf (stderr, "%d,", zptr[i]);
+  fprintf (stderr,"\n");
+  #endif
 }
