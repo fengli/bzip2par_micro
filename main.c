@@ -72,9 +72,7 @@ void df_simpleSort ( UChar *block, Int32 last, Int32 *zptr, UInt16 *quadrant,
       }
   }
 
-  #ifdef _DEBUG
   fprintf (stderr, "workdone:%ld\n",*workDone_p);
-  #endif
 }
 
 int main (int argc, char **argv)

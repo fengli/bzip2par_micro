@@ -74,6 +74,8 @@ void work_func (Int32 i, Int32 lo, Int32 h, Int32 hi, Int32 d,
   zptr[j] = v;
 }
 
+#define NUM_TASKS 100
+#define GET_STEP(h) ((h/NUM_TASKS)+((h%NUM_TASKS)!=0))
 void start_work_func ()
 {
   fp_worker *fp = (fp_worker *) dfs_tload ();
@@ -89,18 +91,21 @@ void start_work_func ()
   uint64_t *workDone_p = fp->workDone_p;
   uint64_t workLimit = fp->workLimit;
   Bool firstAttempt = fp->firstAttempt;
+  Int32 step = GET_STEP(h);
 
   Int32 i,v,j;
 
   for (i = ii; i <= hi; i+=h)
     {
-      work_func (i, lo, h, hi, d, block, last, zptr, quadrant, workDone_p, workLimit, firstAttempt);
+      Int32 local_upper_bound = h*((i-lo)/h+1)+lo;
+      for (j = i; j < i+step && j < local_upper_bound && j <= hi; j++)
+	work_func (j, lo, h, hi, d, block, last, zptr, quadrant, workDone_p, workLimit, firstAttempt);
     }
 
-  /* fprintf (stderr, "tasks_created:%d\n", tasks_created); */
   dfs_tend ();
 
   __sync_add_and_fetch (&tasks_consumed, 1);
+  /* fprintf (stderr, "tasks_created:%d, task_consumed:%d\n", tasks_created, tasks_consumed); */
 }
 
 void df_simpleSort ( UChar *block, Int32 last, Int32 *zptr, UInt16 *quadrant,
@@ -119,7 +124,10 @@ void df_simpleSort ( UChar *block, Int32 last, Int32 *zptr, UInt16 *quadrant,
 
   for (; hp >= 0; hp--) {
     h = incs[hp];
-    for (i = lo+h; i < lo+h+h; i++)
+
+    Int32 step = GET_STEP(h);
+
+    for (i = lo+h; i < lo+h+h; i+=step)
       {
 	/* fprintf (stderr, "***** %d created\n",i); */
 	tasks_created++;
@@ -153,9 +161,7 @@ void df_simpleSort ( UChar *block, Int32 last, Int32 *zptr, UInt16 *quadrant,
       fflush(stdout);//fprintf (stderr,"tasks_created:%d\n",tasks_created);
     }
 
-  #ifdef _DEBUG
   fprintf (stderr,"workdone:%ld\n",*workDone_p);
-  #endif
 }
 
 int main (int argc, char **argv)
